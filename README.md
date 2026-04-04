@@ -1,10 +1,9 @@
 # ColorCatcher
 
 ## Screenshots
-<img src="Screenshot1.png" width="200" />
-<img src="Screenshot2.png" width="200" />
-<img src="Screenshot3.png" width="200" />
-<img src="Screenshot4.png" width="200" />
+<img src="screenshot1.png" width="200" />
+<img src="screenshot2.png" width="200" />
+<img src="screenshot3.png" width="200" />
 
 ## What is it
 ColorCatcher is a simple Color Picker like the one in macOS, the difference is that this one shows the Hex and RGB values (unlike the macOS one that only does RGB colors)
