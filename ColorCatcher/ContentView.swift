@@ -12,6 +12,7 @@ import FoundationModels
 #endif
 
 struct ContentView: View {
+    @AppStorage("hasSeenIntro") private var hasSeenIntro = false
     @State private var red: Double = 255
     @State private var green: Double = 99
     @State private var blue: Double = 71
@@ -22,6 +23,8 @@ struct ContentView: View {
     @State private var isMiniMode = true
     @State private var window: NSWindow?
     @State private var colorPanelObserver: NSObjectProtocol?
+    @State private var colorHistory: [ColorHistoryEntry] = []
+    @State private var showIntro = false
 
     private var selectedColor: Color {
         Color(
@@ -69,12 +72,26 @@ struct ContentView: View {
                     miniMeter
                 } else {
                     VStack(spacing: 24) {
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             VStack(spacing: 24) {
                                 header
                                 meterCard
                                 suggestionsCard
                                 aiCard
+                                HStack(spacing: 10) {
+                                    Text("Made by Ariel in 2026")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundStyle(.secondary)
+
+                                    Button("Show Intro") {
+                                        withAnimation(.easeIn(duration: 0.3)) {
+                                            showIntro = true
+                                        }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .controlSize(.small)
+                                }
+                                .padding(.bottom, 6)
                             }
                         }
                     }
@@ -90,6 +107,11 @@ struct ContentView: View {
                 Spacer()
             }
             .padding(18)
+
+            if showIntro {
+                introOverlay
+                    .transition(.opacity)
+            }
         }
         .background(WindowReader { newWindow in
             window = newWindow
@@ -103,6 +125,12 @@ struct ContentView: View {
         )
         .onAppear {
             modelStatus = ColorRecommendationAI.statusMessage
+            if !hasSeenIntro {
+                isMiniMode = false
+                withAnimation(.easeIn(duration: 0.3)) {
+                    showIntro = true
+                }
+            }
             configureWindow()
         }
         .onChange(of: hexValue) { _ in
@@ -128,6 +156,66 @@ struct ContentView: View {
             }
 
             Spacer()
+        }
+    }
+
+    private var introOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.22)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Welcome to ColorCatcher")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+
+                Text("A quick tour before you start.")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    IntroFeatureRow(
+                        icon: "eyedropper.halffull",
+                        title: "Click the color circle",
+                        detail: "The mini picker opens the system color panel so you can grab a new color fast."
+                    )
+                    IntroFeatureRow(
+                        icon: "pin",
+                        title: "Pin it on top",
+                        detail: "Use the pin button to keep ColorCatcher floating above your other windows."
+                    )
+                    IntroFeatureRow(
+                        icon: "arrow.down.right.and.arrow.up.left",
+                        title: "Expand when you need more",
+                        detail: "The larger view shows RGB controls, history, matching colors, and AI notes."
+                    )
+                    IntroFeatureRow(
+                        icon: "clock.arrow.circlepath",
+                        title: "Jump back to recent colors",
+                        detail: "Expanded mode keeps a short history so you can revisit what you picked earlier."
+                    )
+                }
+
+                HStack(spacing: 12) {
+                    Button("Start in Mini Picker") {
+                        dismissIntro(startMini: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Explore Full App") {
+                        dismissIntro(startMini: false)
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: 480, alignment: .leading)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .stroke(Color.white.opacity(0.55), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.18), radius: 24, y: 14)
+            .padding(24)
         }
     }
 
@@ -330,6 +418,8 @@ struct ContentView: View {
                 ValueCard(title: "HEX", value: hexValue)
                 ValueCard(title: "RGB", value: rgbValue)
             }
+
+            historySection(compact: false)
         }
         .padding(24)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
@@ -337,6 +427,43 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .stroke(Color.white.opacity(0.55), lineWidth: 1)
         }
+    }
+
+    @ViewBuilder
+    private func historySection(compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("History")
+                .font(.system(size: compact ? 11 : 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            if colorHistory.isEmpty {
+                Text("Your previous colors will appear here.")
+                    .font(.system(size: compact ? 11 : 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: compact ? 8 : 10) {
+                        ForEach(colorHistory) { entry in
+                            Button {
+                                updateColorComponents(from: entry.color)
+                            } label: {
+                                Circle()
+                                    .fill(entry.color)
+                                    .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
+                                    .overlay {
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.75), lineWidth: 1.5)
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                            .help("\(entry.hex) • RGB \(entry.rgb)")
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var suggestionsCard: some View {
@@ -420,6 +547,22 @@ struct ContentView: View {
             return
         }
 
+        let previous = ColorHistoryEntry(
+            color: selectedColor,
+            hex: hexValue,
+            rgb: rgbValue
+        )
+
+        let nextHex = Self.hexString(
+            red: Int((srgb.redComponent * 255).rounded()),
+            green: Int((srgb.greenComponent * 255).rounded()),
+            blue: Int((srgb.blueComponent * 255).rounded())
+        )
+
+        if nextHex != previous.hex {
+            recordHistory(previous)
+        }
+
         red = srgb.redComponent * 255
         green = srgb.greenComponent * 255
         blue = srgb.blueComponent * 255
@@ -474,6 +617,21 @@ struct ContentView: View {
     private static func hexString(red: Int, green: Int, blue: Int) -> String {
         String(format: "#%02X%02X%02X", red, green, blue)
     }
+
+    private func recordHistory(_ entry: ColorHistoryEntry) {
+        colorHistory.removeAll { $0.hex == entry.hex }
+        colorHistory.insert(entry, at: 0)
+        colorHistory = Array(colorHistory.prefix(8))
+    }
+
+    private func dismissIntro(startMini: Bool) {
+        hasSeenIntro = true
+        isMiniMode = startMini
+        withAnimation(.easeOut(duration: 0.2)) {
+            showIntro = false
+        }
+        configureWindow()
+    }
 }
 
 private struct ColorChannelRow: View {
@@ -515,6 +673,38 @@ private struct ValueCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct ColorHistoryEntry: Identifiable {
+    let id = UUID()
+    let color: Color
+    let hex: String
+    let rgb: String
+}
+
+private struct IntroFeatureRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .frame(width: 22, height: 22)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.primary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+
+                Text(detail)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

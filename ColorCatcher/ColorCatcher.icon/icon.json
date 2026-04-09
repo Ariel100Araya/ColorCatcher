@@ -1,8 +1,8 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:0.80469,0.63232,0.82959,1.00000",
-      "display-p3:0.86914,0.67432,0.86377,1.00000"
+      "display-p3:0.86914,0.67432,0.86377,1.00000",
+      "display-p3:0.80469,0.63232,0.82959,1.00000"
     ],
     "orientation" : {
       "start" : {
@@ -20,7 +20,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "display-p3:0.93383,0.65085,0.79793,1.00000"
+            "solid" : "extended-gray:1.00000,1.00000"
           },
           "image-name" : "swatchpalette.png",
           "name" : "swatchpalette",
